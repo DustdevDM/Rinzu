@@ -1,0 +1,5 @@
+{
+  "chromeExe": "path/to/chrome",
+  "cobaltApi": "your_cobalt_api_url",
+  "cobaltApiKey": "your_cobalt_api_key"
+}

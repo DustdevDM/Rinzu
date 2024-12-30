@@ -1,12 +1,19 @@
-const { Client, LocalAuth, MessageMedia } = require("whatsapp-web.js");
-const qrCode = require("qrcode-terminal");
-const axios = require("axios");
+import {
+  Message,
+  MessageTypes,
+  MessageMedia,
+  Client,
+  LocalAuth,
+} from "whatsapp-web.js";
 
-require("dotenv").config();
+const qrCode = require("qrcode-terminal");
+import axios from "axios";
+
+import config from "./config";
 
 const client = new Client({
   puppeteer: {
-    executablePath: process.env.CHROME_EXE,
+    executablePath: config.chromeExe,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   },
   authStrategy: new LocalAuth({
@@ -14,9 +21,8 @@ const client = new Client({
   }),
 });
 
-client.on("qr", (qr) => {
-  // Generate and scan this code with your phone
-  qrCode.generate(qr, { small: true }, (qrCode) => {
+client.on("qr", (qrData: string) => {
+  qrCode.generate(qrData, { small: true }, (qrCode: string) => {
     console.log("QR RECEIVED\n", qrCode);
   });
 });
@@ -25,9 +31,10 @@ client.on("ready", () => {
   console.log("Client is ready!");
 });
 
-client.on("message", async (msg) => {
-  console.log(msg.body);
-  const tikTokRegex = /https?:\/\/(?:www\.)?vm\.tiktok\.com\/[^\s]+/gi;
+client.on("message_create", async (msg: Message) => {
+  if (msg.type != MessageTypes.TEXT) return;
+
+  const tikTokRegex: RegExp = /https?:\/\/(?:www\.)?vm\.tiktok\.com\/[^\s]+/gi;
   const matches = msg.body.match(tikTokRegex);
   if (matches) {
     for (const match of matches) {
@@ -46,28 +53,33 @@ client.on("message", async (msg) => {
   }
 });
 
-async function processVideo(url) {
+type VideoProcessData = {
+  status: string;
+  url: string;
+  filename: string;
+};
+
+async function processVideo(url: string): Promise<VideoProcessData> {
   const response = await axios.post(
-    process.env.COBALT_API,
+    config.cobaltApi,
     { url: url },
     {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        Authorization: `Api-Key ${process.env.COBALT_API_KEY}`,
+        Authorization: `Api-Key ${config.cobaltApiKey}`,
       },
     }
   );
 
-  const result = {
+  return {
     status: response.data.status,
     url: response.data.url,
     filename: response.data.filename,
   };
-  return result;
 }
 
-async function downloadVideo(url, filename) {
+async function downloadVideo(url: string, filename: string) {
   return await MessageMedia.fromUrl(url, {
     unsafeMime: true,
     filename: filename,
