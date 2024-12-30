@@ -7,10 +7,26 @@ on:
     branches: ["main", "development"]
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set up Node LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm i typescript -g && tsc
+
   publish:
     if: endsWith(github.ref, 'main')
+    needs: build
     runs-on: ubuntu-latest
-    name: docker image
+    name: Publish Docker Image
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
